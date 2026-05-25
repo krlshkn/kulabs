@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Нечеткая логика - Соотношение между разнородными переменными</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif; }
+        body { background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1500px; margin: 0 auto; }
+        .tabs { display: flex; gap: 8px; border-bottom: 2px solid #ccc; margin-bottom: 24px; background: white; padding: 8px 16px 0 16px; border-radius: 16px 16px 0 0; flex-wrap: wrap; }
+        .tab-btn { background: #e9ecef; border: none; padding: 10px 24px; font-size: 1rem; font-weight: 600; cursor: pointer; border-radius: 24px 24px 0 0; transition: 0.2s; color: #1e2a3a; }
+        .tab-btn.active { background: white; border-bottom: 3px solid #0d6efd; color: #0d6efd; }
+        .tab-content { display: none; background: white; border-radius: 0 20px 20px 20px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .tab-content.active { display: block; }
+        .flex-row { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px; }
+        .card { background: #fefefe; border: 1px solid #dee2e6; border-radius: 20px; padding: 20px; flex: 1; min-width: 260px; }
+        .param-group { margin-bottom: 20px; }
+        label { font-weight: 600; display: block; margin-bottom: 6px; color: #2c3e66; }
+        input, select, button { padding: 8px 12px; border-radius: 12px; border: 1px solid #ced4da; font-size: 0.9rem; }
+        button { background: #0d6efd; color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.15s; }
+        button:hover { background: #0b5ed7; }
+        .warning { background: #fff3cd; border-left: 5px solid #ffc107; padding: 10px; border-radius: 12px; margin: 15px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.85rem; }
+        th, td { border: 1px solid #dee2e6; padding: 10px 8px; text-align: center; }
+        th { background: #eef2ff; }
+        .term-block { display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; }
+        .term-item { background: #f8f9fa; border-radius: 20px; padding: 16px; min-width: 220px; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .term-item canvas { max-height: 140px; width: 100%; margin-top: 10px; }
+        .inline-fields { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; align-items: center; }
+        .stat-grid { display: flex; flex-wrap: wrap; gap: 30px; margin: 20px 0; }
+        .inline-buttons { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+        .formula-card { background: #e8f0fe; padding: 12px; border-radius: 16px; text-align: center; font-family: monospace; font-size: 0.9rem; margin-top: 15px; }
+        .small-graph { max-width: 500px; margin: 0 auto; }
+        .info-text { font-size: 0.8rem; color: #6c757d; margin-top: 5px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="tabX">📊 Переменная X (функции принадлежности)</button>
+        <button class="tab-btn" data-tab="tabY">📈 Переменная Y (функции принадлежности)</button>
+        <button class="tab-btn" data-tab="tabExpert">👥 Экспертная оценка</button>
+    </div>
+
+    <!-- Вкладка X -->
+    <div id="tabX" class="tab-content active">
+        <h2>Нечеткая логика - Переменная X</h2>
+        <div class="card">
+            <h3>Настройки переменной X</h3>
+            <div class="param-group"><label>Название переменной X:</label><input type="text" id="varXName" value="Возможность интенсивного использования ПО"></div>
+            <div class="param-group"><label>Диапазон определения X:</label><input type="number" id="xMin" value="0" step="0.1" style="width:80px"> — <input type="number" id="xMax" value="1" step="0.1" style="width:80px"></div>
+            <button id="updateXFuncBtn">Обновить функции принадлежности X</button>
+            <div class="info-text">※ Диапазон влияет на расположение центров термов: 0 → min, 1 → max</div>
+        </div>
+        <div id="xTermsContainer" style="display: none;">
+            <hr><h3>Функции принадлежности X (термы)</h3>
+            <div id="xTermList" class="term-block"></div>
+            <h4>Все пять графиков вместе (X)</h4>
+            <canvas id="allXTermsChart" width="700" height="300" style="max-width:100%; height:300px; background:#fff; border-radius:16px; border:1px solid #ccc;"></canvas>
+        </div>
+        <div class="warning" id="xWarningMsg">⚠ Настройте параметры термов и нажмите "Обновить функции"</div>
+    </div>
+
+    <!-- Вкладка Y -->
+    <div id="tabY" class="tab-content">
+        <h2>Нечеткая логика - Переменная Y</h2>
+        <div class="card">
+            <h3>Настройки переменной Y</h3>
+            <div class="param-group"><label>Название переменной Y:</label><input type="text" id="varYName" value="Удобство использования"></div>
+            <div class="param-group"><label>Диапазон определения Y:</label><input type="number" id="yMin" value="0" step="0.1" style="width:80px"> — <input type="number" id="yMax" value="1" step="0.1" style="width:80px"></div>
+            <button id="updateYFuncBtn">Обновить функции принадлежности Y</button>
+            <div class="info-text">※ Диапазон влияет на расположение центров термов: 0 → min, 1 → max</div>
+        </div>
+        <div id="yTermsContainer" style="display: none;">
+            <hr><h3>Функции принадлежности Y (термы)</h3>
+            <div id="yTermList" class="term-block"></div>
+            <h4>Все пять графиков вместе (Y)</h4>
+            <canvas id="allYTermsChart" width="700" height="300" style="max-width:100%; height:300px; background:#fff; border-radius:16px; border:1px solid #ccc;"></canvas>
+        </div>
+        <div class="warning" id="yWarningMsg">⚠ Настройте параметры термов и нажмите "Обновить функции"</div>
+    </div>
+
+    <!-- Вкладка экспертной оценки -->
+    <div id="tabExpert" class="tab-content">
+        <div style="display: flex; justify-content: space-between;"><h2>Нечеткая логика - Соотношение между разнородными переменными</h2></div>
+        <div class="card"><label>Количество экспертов:</label><input type="number" id="expertsCount" value="10" min="1" max="50"><button id="applyExpertsCount">Применить</button></div>
+        <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+            <div class="card"><h4>Автоматическое заполнение X</h4><label>Средний ранг (1-Малая,5-Высокая):</label><input type="number" id="meanRankX" value="3" step="0.1"><label>Ст. отклонение:</label><input type="number" id="stdRankX" value="0.5" step="0.1"><button id="generateXBtn">Сгенерировать X</button></div>
+            <div class="card"><h4>Автоматическое заполнение Y</h4><label>Средний ранг:</label><input type="number" id="meanRankY" value="3" step="0.1"><label>Ст. отклонение:</label><input type="number" id="stdRankY" value="0.5" step="0.1"><button id="generateYBtn">Сгенерировать Y</button></div>
+        </div>
+        <div style="overflow-x:auto;"><table id="expertTable"><thead id="tableHeader"></thead><tbody id="tableBody"></tbody></table></div>
+        <div class="inline-buttons"><button id="clearTableBtn">Очистить таблицу</button><button id="showStatsBtn">Показать статистику</button></div>
+        <div id="statsPanel" style="display: none;"></div>
+        <hr><h3>Дефаззификация</h3>
+        <div><label>Метод дефаззификации:</label><select id="defuzzMethod"><option value="centroid">Центр тяжести</option><option value="meanmax">Средний максимум</option></select><button id="applyDefuzzBtn">Применить дефаззификацию</button></div>
+        <div id="defuzzTableContainer"></div>
+        <div class="flex-row">
+            <div class="card"><label>Коррекция X (отклонить значения, выходящие за 0.5 ± порог)</label><input type="number" id="correctionX" value="0.2" step="0.01"><button id="applyCorrXBtn">Применить коррекцию X</button><div class="info-text">Пример: при пороге 0.2 значения вне [0.3, 0.7] заменяются на 0.5</div></div>
+            <div class="card"><label>Коррекция Y</label><input type="number" id="correctionY" value="0.2" step="0.01"><button id="applyCorrYBtn">Применить коррекцию Y</button><div class="info-text">Значения вне [0.5-порог, 0.5+порог] → 0.5</div></div>
+        </div>
+        <button id="buildGraphBtn">Построить график зависимости X→Y</button>
+        <div id="graphContainer" class="small-graph"></div>
+        <div id="formulaContainer" class="formula-card" style="display:none;"></div>
+    </div>
+</div>
+
+<script>
+    // ---- конфигурации для X и Y ----
+    let xConfigs = [], yConfigs = [];
+    const termNames = ["Малая", "Ниже среднего", "Средняя", "Выше среднего", "Высокая"];
+    const defaultCenters = [0.0, 0.25, 0.5, 0.75, 1.0];
+    
+    function initConfigs(configs) {
+        for(let i=0; i<5; i++) {
+            configs.push({
+                name: termNames[i],
+                center: defaultCenters[i],
+                spread: 0.11,
+                type: "gauss"
+            });
+        }
+    }
+    initConfigs(xConfigs);
+    initConfigs(yConfigs);
+    
+    // функция принадлежности
+    function membershipValue(x, config) {
+        let c = config.center;
+        let s = config.spread;
+        if(s <= 0.001) s = 0.001;
+        switch(config.type) {
+            case 'gauss': return Math.exp(-Math.pow(x-c,2)/(2*s*s));
+            case 'bell': return 1 / (1 + Math.pow((x-c)/s, 2));
+            case 'sshape':
+                if(x <= c - s) return 0;
+                if(x >= c + s) return 1;
+                return 0.5 + 0.5 * Math.sin(Math.PI * (x - c) / (2*s));
+            case 'zshape':
+                if(x <= c - s) return 1;
+                if(x >= c + s) return 0;
+                return 0.5 - 0.5 * Math.sin(Math.PI * (x - c) / (2*s));
+            default: return Math.exp(-Math.pow(x-c,2)/(2*s*s));
+        }
+    }
+    
+    // универсальная отрисовка для X или Y
+    function renderMembershipGraphs(variable) {
+        const isX = (variable === 'X');
+        const configs = isX ? xConfigs : yConfigs;
+        const containerId = isX ? 'xTermsContainer' : 'yTermsContainer';
+        const termListId = isX ? 'xTermList' : 'yTermList';
+        const allChartId = isX ? 'allXTermsChart' : 'allYTermsChart';
+        const minVal = parseFloat(document.getElementById(isX ? 'xMin' : 'yMin').value);
+        const maxVal = parseFloat(document.getElementById(isX ? 'xMax' : 'yMax').value);
+        let minX = minVal, maxX = maxVal;
+        if(isNaN(minX)) minX = 0;
+        if(isNaN(maxX)) maxX = 1;
+        if(minX >= maxX) maxX = minX + 0.1;
+        
+        const termDiv = document.getElementById(termListId);
+        termDiv.innerHTML = '';
+        
+        let allDatasets = [];
+        let chartsArray = [];
+        
+        configs.forEach((cfg, idx) => {
+            let card = document.createElement('div');
+            card.className = 'term-item';
+            card.innerHTML = `
+                <strong>${cfg.name}</strong>
+                <div class="inline-fields"><label>Тип:</label>
+                    <select class="func-type" data-var="${variable}" data-idx="${idx}">
+                        <option value="gauss" ${cfg.type==='gauss'?'selected':''}>Гауссова</option>
+                        <option value="bell" ${cfg.type==='bell'?'selected':''}>Колоколообразная</option>
+                        <option value="sshape" ${cfg.type==='sshape'?'selected':''}>S-образная</option>
+                        <option value="zshape" ${cfg.type==='zshape'?'selected':''}>Z-образная</option>
+                    </select>
+                </div>
+                <div class="inline-fields"><label>Центр (в долях 0..1):</label><input type="number" class="center-input" data-var="${variable}" data-idx="${idx}" value="${cfg.center}" step="0.01" style="width:80px"></div>
+                <div class="inline-fields"><label>Размах:</label><input type="number" class="spread-input" data-var="${variable}" data-idx="${idx}" value="${cfg.spread}" step="0.01" style="width:80px"></div>
+                <canvas id="${variable}_chart_${idx}" width="200" height="120"></canvas>
+                <div class="info-text">Факт. центр: ${(minX + cfg.center*(maxX-minX)).toFixed(3)}</div>
+            `;
+            termDiv.appendChild(card);
+            
+            const typeSelect = card.querySelector('.func-type');
+            const centerInp = card.querySelector('.center-input');
+            const spreadInp = card.querySelector('.spread-input');
+            const updateFunc = () => {
+                configs[idx].type = typeSelect.value;
+                configs[idx].center = parseFloat(centerInp.value);
+                configs[idx].spread = parseFloat(spreadInp.value);
+                if(isNaN(configs[idx].center)) configs[idx].center = defaultCenters[idx];
+                if(isNaN(configs[idx].spread)) configs[idx].spread = 0.11;
+                renderMembershipGraphs(variable);
+            };
+            typeSelect.addEventListener('change', updateFunc);
+            centerInp.addEventListener('input', updateFunc);
+            spreadInp.addEventListener('input', updateFunc);
+            
+            let points = [];
+            let steps = 100;
+            let step = (maxX-minX)/steps;
+            for(let i=0; i<=steps; i++) {
+                let x = minX + i*step;
+                let normX = (x - minX) / (maxX - minX);
+                let y = membershipValue(normX, configs[idx]);
+                points.push({x, y});
+            }
+            setTimeout(() => {
+                let canvas = document.getElementById(`${variable}_chart_${idx}`);
+                if(canvas) {
+                    let ctx = canvas.getContext('2d');
+                    let chart = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels: points.map(p=>p.x.toFixed(2)), datasets: [{ label: cfg.name, data: points.map(p=>p.y), borderColor: `hsl(${idx*72}, 70%, 55%)`, borderWidth: 2, fill: false, pointRadius: 0 }] },
+                        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { max: 1, min: 0 } } }
+                    });
+                    chartsArray.push(chart);
+                }
+            }, 20);
+            
+            let dataPoints = [];
+            for(let i=0; i<=100; i++) {
+                let t = i/100;
+                let normX = t;
+                let y = membershipValue(normX, configs[idx]);
+                dataPoints.push(y);
+            }
+            allDatasets.push({ label: cfg.name, data: dataPoints, borderColor: `hsl(${idx*72}, 70%, 55%)`, borderWidth: 2, fill: false, tension: 0.2 });
+        });
+        
+        setTimeout(() => {
+            let ctxAll = document.getElementById(allChartId)?.getContext('2d');
+            if(ctxAll) {
+                let existingChart = window[`${variable}AllChart`];
+                if(existingChart) existingChart.destroy();
+                let labels = [];
+                for(let i=0; i<=100; i++) labels.push((minX + i*(maxX-minX)/100).toFixed(2));
+                let newChart = new Chart(ctxAll, {
+                    type: 'line',
+                    data: { labels: labels, datasets: allDatasets },
+                    options: { responsive: true, maintainAspectRatio: true, scales: { x: { title: { display: true, text: `Значение (${minX}..${maxX})` } }, y: { title: { display: true, text: 'Степень принадлежности' }, min:0, max:1 } } }
+                });
+                window[`${variable}AllChart`] = newChart;
+            }
+        }, 50);
+        
+        document.getElementById(containerId).style.display = 'block';
+        const warnId = isX ? 'xWarningMsg' : 'yWarningMsg';
+        document.getElementById(warnId).innerHTML = `✅ Функции принадлежности ${variable} настроены. Диапазон: [${minX}, ${maxX}]`;
+    }
+    
+    // ----- Экспертная часть -----
+    let currentExperts = 10;
+    let expertData = [];
+    let defuzzValues = [];
+    
+    function rankNameToCenter(rankName) { let idx = termNames.indexOf(rankName); return idx !== -1 ? defaultCenters[idx] : 0.5; }
+    function generateRank(mean, stdDev) {
+        let u=0,v=0; while(u===0) u=Math.random(); while(v===0) v=Math.random();
+        let z = Math.sqrt(-2.0*Math.log(u))*Math.cos(2*Math.PI*v);
+        let raw = mean + z*stdDev;
+        let rank = Math.round(raw); return Math.min(5, Math.max(1, rank));
+    }
+    function rankToTermName(rank) { const map = {1:"Малая",2:"Ниже среднего",3:"Средняя",4:"Выше среднего",5:"Высокая"}; return map[rank]; }
+    
+    function initTable(experts) {
+        currentExperts = experts;
+        expertData = [];
+        for(let i=0; i<experts; i++) expertData.push({ xRankName:"Средняя", yRankName:"Средняя", xVal:0.5, yVal:0.5 });
+        renderExpertTable();
+    }
+    function renderExpertTable() {
+        let xName = document.getElementById('varXName').value;
+        let yName = document.getElementById('varYName').value;
+        let thead = `<tr><th>№</th><th>X: ${xName}</th><th>Y: ${yName}</th></tr>`;
+        let tbody = '';
+        for(let i=0; i<expertData.length; i++) {
+            tbody += `<tr>
+                <td>${i+1}</td>
+                <td><select class="x-select" data-idx="${i}">${termNames.map(t => `<option value="${t}" ${expertData[i].xRankName===t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+                <td><select class="y-select" data-idx="${i}">${termNames.map(t => `<option value="${t}" ${expertData[i].yRankName===t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+            </tr>`;
+        }
+        document.getElementById('tableHeader').innerHTML = thead;
+        document.getElementById('tableBody').innerHTML = tbody;
+        document.querySelectorAll('.x-select').forEach(sel => sel.addEventListener('change', (e) => { let idx = parseInt(sel.dataset.idx); expertData[idx].xRankName = sel.value; expertData[idx].xVal = rankNameToCenter(sel.value); }));
+        document.querySelectorAll('.y-select').forEach(sel => sel.addEventListener('change', (e) => { let idx = parseInt(sel.dataset.idx); expertData[idx].yRankName = sel.value; expertData[idx].yVal = rankNameToCenter(sel.value); }));
+    }
+    function generateColumn(mean, stdDev, isX) {
+        for(let i=0; i<expertData.length; i++) {
+            let rank = generateRank(mean, stdDev);
+            let term = rankToTermName(rank);
+            if(isX) { expertData[i].xRankName = term; expertData[i].xVal = rankNameToCenter(term); }
+            else { expertData[i].yRankName = term; expertData[i].yVal = rankNameToCenter(term); }
+        }
+        renderExpertTable();
+    }
+    function clearTable() {
+        for(let i=0; i<expertData.length; i++) { expertData[i].xRankName="Средняя"; expertData[i].yRankName="Средняя"; expertData[i].xVal=0.5; expertData[i].yVal=0.5; }
+        renderExpertTable();
+        document.getElementById('statsPanel').style.display = 'none';
+        document.getElementById('defuzzTableContainer').innerHTML = '';
+        defuzzValues = [];
+    }
+    function showStatistics() {
+        let xCount = {Малая:0,"Ниже среднего":0,Средняя:0,"Выше среднего":0,Высокая:0};
+        let yCount = {Малая:0,"Ниже среднего":0,Средняя:0,"Выше среднего":0,Высокая:0};
+        expertData.forEach(e => { xCount[e.xRankName]++; yCount[e.yRankName]++; });
+        let total = expertData.length;
+        let xRows='', yRows='';
+        for(let t of termNames) {
+            let xv = xCount[t]||0, xp=(xv/total*100).toFixed(1);
+            let yv = yCount[t]||0, yp=(yv/total*100).toFixed(1);
+            xRows += `<div>${t}\t${xv}\t${xp}%</div>`;
+            yRows += `<div>${t}\t${yv}\t${yp}%</div>`;
+        }
+        let statsHtml = `<div class="stat-grid"><div class="card"><h4>${document.getElementById('varXName').value}</h4>${xRows}</div>
+        <div class="card"><h4>${document.getElementById('varYName').value}</h4>${yRows}</div></div>
+        <div class="flex-row"><div class="card"><canvas id="chartXDist" style="height:200px"></canvas></div><div class="card"><canvas id="chartYDist" style="height:200px"></canvas></div></div>`;
+        document.getElementById('statsPanel').innerHTML = statsHtml;
+        document.getElementById('statsPanel').style.display = 'block';
+        let ctxX = document.getElementById('chartXDist')?.getContext('2d');
+        let ctxY = document.getElementById('chartYDist')?.getContext('2d');
+        if(ctxX) new Chart(ctxX, { type: 'bar', data: { labels: termNames, datasets: [{ label: 'Распределение', data: termNames.map(t=>xCount[t]), backgroundColor: '#3b82f6' }] } });
+        if(ctxY) new Chart(ctxY, { type: 'bar', data: { labels: termNames, datasets: [{ label: 'Распределение', data: termNames.map(t=>yCount[t]), backgroundColor: '#ef4444' }] } });
+    }
+    function defuzzifyValue(rankName, method) {
+        let idx = termNames.indexOf(rankName);
+        if(method === 'centroid') return defaultCenters[idx];
+        else {
+            if(idx===0) return defaultCenters[0];
+            if(idx===4) return defaultCenters[4];
+            return (defaultCenters[idx-1]+defaultCenters[idx]+defaultCenters[idx+1])/3;
+        }
+    }
+    function applyDefuzzification() {
+        let method = document.getElementById('defuzzMethod').value;
+        defuzzValues = expertData.map(exp => ({ xNum: defuzzifyValue(exp.xRankName, method), yNum: defuzzifyValue(exp.yRankName, method) }));
+        renderDefuzzTable();
+    }
+    function renderDefuzzTable() {
+        let xName = document.getElementById('varXName').value;
+        let yName = document.getElementById('varYName').value;
+        let html = `<h4>Таблица 2 - Численные значения (в долях 0..1)</h4><table border="1" style="width:100%"><thead><tr><th>№</th><th>X: ${xName}</th><th>Y: ${yName}</th></tr></thead><tbody>`;
+        defuzzValues.forEach((val,idx) => { html += `<tr><td>${idx+1}</td><td>${val.xNum.toFixed(4)}</td><td>${val.yNum.toFixed(4)}</td></tr>`; });
+        html += `</tbody></table>`;
+        document.getElementById('defuzzTableContainer').innerHTML = html;
+    }
+    function applyCorrection(isX, threshold) {
+        if(!defuzzValues.length) applyDefuzzification();
+        let changed = false;
+        for(let i=0; i<defuzzValues.length; i++) {
+            if(isX && Math.abs(defuzzValues[i].xNum - 0.5) > threshold) {
+                defuzzValues[i].xNum = 0.5;
+                changed = true;
+            }
+            if(!isX && Math.abs(defuzzValues[i].yNum - 0.5) > threshold) {
+                defuzzValues[i].yNum = 0.5;
+                changed = true;
+            }
+        }
+        if(changed) renderDefuzzTable();
+        else alert(`Нет значений, выходящих за порог ${threshold} от 0.5`);
+    }
+    function buildGraphWithRegression() {
+        if(!defuzzValues.length) applyDefuzzification();
+        let points = defuzzValues.map(d => ({x: d.xNum, y: d.yNum}));
+        let container = document.getElementById('graphContainer');
+        container.innerHTML = `<canvas id="scatterCanvas" width="450" height="350" style="max-width:100%; height:auto;"></canvas>`;
+        let ctx = document.getElementById('scatterCanvas').getContext('2d');
+        let n = points.length;
+        let sumX=0,sumX2=0,sumX3=0,sumX4=0,sumX5=0,sumX6=0,sumY=0,sumXY=0,sumX2Y=0,sumX3Y=0;
+        points.forEach(p => { let x=p.x, y=p.y; sumX+=x; sumX2+=x*x; sumX3+=x*x*x; sumX4+=x*x*x*x; sumX5+=x*x*x*x*x; sumX6+=x*x*x*x*x*x; sumY+=y; sumXY+=x*y; sumX2Y+=x*x*y; sumX3Y+=x*x*x*y; });
+        let A=[[sumX6,sumX5,sumX4,sumX3],[sumX5,sumX4,sumX3,sumX2],[sumX4,sumX3,sumX2,sumX],[sumX3,sumX2,sumX,n]];
+        let B=[sumX3Y,sumX2Y,sumXY,sumY];
+        function solve(A,B){ let n=4; for(let i=0;i<n;i++){ let max=i; for(let r=i+1;r<n;r++) if(Math.abs(A[r][i])>Math.abs(A[max][i])) max=r; [A[i],A[max]]=[A[max],A[i]]; [B[i],B[max]]=[B[max],B[i]]; for(let r=i+1;r<n;r++){ let f=A[r][i]/A[i][i]; B[r]-=f*B[i]; for(let c=i;c<n;c++) A[r][c]-=f*A[i][c];}} let x=new Array(n); for(let i=n-1;i>=0;i--){ let s=0; for(let j=i+1;j<n;j++) s+=A[i][j]*x[j]; x[i]=(B[i]-s)/A[i][i];} return {a:x[0],b:x[1],c:x[2],d:x[3]};}
+        let coeff={a:0,b:0,c:0,d:0};
+        try{ coeff=solve(A,B); }catch(e){}
+        let formula = `${coeff.a.toFixed(4)}·X³ + ${coeff.b.toFixed(4)}·X² + ${coeff.c.toFixed(4)}·X + ${coeff.d.toFixed(4)}`;
+        document.getElementById('formulaContainer').innerHTML = `📈 Полиномиальная регрессия (3-й степени): <strong>Y = ${formula}</strong>`;
+        document.getElementById('formulaContainer').style.display = 'block';
+        let fitPoints = [];
+        for(let x=0; x<=1; x+=0.02) fitPoints.push({x, y: coeff.a*x*x*x + coeff.b*x*x + coeff.c*x + coeff.d});
+        new Chart(ctx, { type: 'scatter', data: { datasets: [{ label: 'Экспертные точки', data: points, backgroundColor: '#0d6efd', pointRadius: 5 }, { label: 'Полиномиальный тренд', data: fitPoints, type: 'line', borderColor: '#dc3545', borderWidth: 2, fill: false, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: true, scales: { x: { min:0, max:1, title: { text: document.getElementById('varXName').value } }, y: { min:0, max:1, title: { text: document.getElementById('varYName').value } } }, plugins: { tooltip: { callbacks: { label: (ctx) => `(${ctx.parsed.x.toFixed(3)}, ${ctx.parsed.y.toFixed(3)})` } } } } });
+    }
+    
+    // ----- События -----
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            let tabId = btn.dataset.tab;
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+            if(tabId === 'tabExpert' && expertData.length === 0) initTable(currentExperts);
+        });
+    });
+    document.getElementById('updateXFuncBtn').onclick = () => renderMembershipGraphs('X');
+    document.getElementById('updateYFuncBtn').onclick = () => renderMembershipGraphs('Y');
+    document.getElementById('applyExpertsCount').onclick = () => { let cnt = parseInt(document.getElementById('expertsCount').value); if(cnt>0) initTable(cnt); };
+    document.getElementById('generateXBtn').onclick = () => generateColumn(parseFloat(document.getElementById('meanRankX').value), parseFloat(document.getElementById('stdRankX').value), true);
+    document.getElementById('generateYBtn').onclick = () => generateColumn(parseFloat(document.getElementById('meanRankY').value), parseFloat(document.getElementById('stdRankY').value), false);
+    document.getElementById('clearTableBtn').onclick = clearTable;
+    document.getElementById('showStatsBtn').onclick = showStatistics;
+    document.getElementById('applyDefuzzBtn').onclick = applyDefuzzification;
+    document.getElementById('applyCorrXBtn').onclick = () => applyCorrection(true, parseFloat(document.getElementById('correctionX').value));
+    document.getElementById('applyCorrYBtn').onclick = () => applyCorrection(false, parseFloat(document.getElementById('correctionY').value));
+    document.getElementById('buildGraphBtn').onclick = buildGraphWithRegression;
+    
+    initTable(10);
+    setTimeout(() => { renderMembershipGraphs('X'); renderMembershipGraphs('Y'); }, 200);
+</script>
+</body>
+</html>
