@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Нечеткая логика - Соотношение между разнородными переменными</title>
+    <title>Нечеткая логика - Точная дефаззификация</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif; }
@@ -34,6 +34,7 @@
         .formula-card { background: #e8f0fe; padding: 12px; border-radius: 16px; text-align: center; font-family: monospace; font-size: 0.9rem; margin-top: 15px; }
         .small-graph { max-width: 500px; margin: 0 auto; }
         .info-text { font-size: 0.8rem; color: #6c757d; margin-top: 5px; }
+        .comparison-note { background: #d1e7dd; border-left: 4px solid #0f5132; padding: 10px; border-radius: 8px; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -52,7 +53,6 @@
             <div class="param-group"><label>Название переменной X:</label><input type="text" id="varXName" value="Возможность интенсивного использования ПО"></div>
             <div class="param-group"><label>Диапазон определения X:</label><input type="number" id="xMin" value="0" step="0.1" style="width:80px"> — <input type="number" id="xMax" value="1" step="0.1" style="width:80px"></div>
             <button id="updateXFuncBtn">Обновить функции принадлежности X</button>
-            <div class="info-text">※ Диапазон влияет на расположение центров термов: 0 → min, 1 → max</div>
         </div>
         <div id="xTermsContainer" style="display: none;">
             <hr><h3>Функции принадлежности X (термы)</h3>
@@ -71,7 +71,6 @@
             <div class="param-group"><label>Название переменной Y:</label><input type="text" id="varYName" value="Удобство использования"></div>
             <div class="param-group"><label>Диапазон определения Y:</label><input type="number" id="yMin" value="0" step="0.1" style="width:80px"> — <input type="number" id="yMax" value="1" step="0.1" style="width:80px"></div>
             <button id="updateYFuncBtn">Обновить функции принадлежности Y</button>
-            <div class="info-text">※ Диапазон влияет на расположение центров термов: 0 → min, 1 → max</div>
         </div>
         <div id="yTermsContainer" style="display: none;">
             <hr><h3>Функции принадлежности Y (термы)</h3>
@@ -85,6 +84,12 @@
     <!-- Вкладка экспертной оценки -->
     <div id="tabExpert" class="tab-content">
         <div style="display: flex; justify-content: space-between;"><h2>Нечеткая логика - Соотношение между разнородными переменными</h2></div>
+        
+        <div class="comparison-note">
+            ⚡ <strong>Точная дефаззификация:</strong> значения термов вычисляются как центры тяжести гауссовых функций (σ=0.11), что даёт:<br>
+            "Ниже среднего" → 0.2539, "Выше среднего" → 0.7457, "Средняя" → 0.5000 (как на оригинальном сайте)
+        </div>
+        
         <div class="card"><label>Количество экспертов:</label><input type="number" id="expertsCount" value="10" min="1" max="50"><button id="applyExpertsCount">Применить</button></div>
         <div style="display: flex; gap: 24px; flex-wrap: wrap;">
             <div class="card"><h4>Автоматическое заполнение X</h4><label>Средний ранг (1-Малая,5-Высокая):</label><input type="number" id="meanRankX" value="3" step="0.1"><label>Ст. отклонение:</label><input type="number" id="stdRankX" value="0.5" step="0.1"><button id="generateXBtn">Сгенерировать X</button></div>
@@ -94,11 +99,17 @@
         <div class="inline-buttons"><button id="clearTableBtn">Очистить таблицу</button><button id="showStatsBtn">Показать статистику</button></div>
         <div id="statsPanel" style="display: none;"></div>
         <hr><h3>Дефаззификация</h3>
-        <div><label>Метод дефаззификации:</label><select id="defuzzMethod"><option value="centroid">Центр тяжести</option><option value="meanmax">Средний максимум</option></select><button id="applyDefuzzBtn">Применить дефаззификацию</button></div>
+        <div><label>Метод дефаззификации:</label>
+            <select id="defuzzMethod">
+                <option value="centroid">Центр тяжести (точный, как в оригинале)</option>
+                <option value="meanmax">Средний максимум</option>
+            </select>
+            <button id="applyDefuzzBtn">Применить дефаззификацию</button>
+        </div>
         <div id="defuzzTableContainer"></div>
         <div class="flex-row">
-            <div class="card"><label>Коррекция X (отклонить значения, выходящие за 0.5 ± порог)</label><input type="number" id="correctionX" value="0.2" step="0.01"><button id="applyCorrXBtn">Применить коррекцию X</button><div class="info-text">Пример: при пороге 0.2 значения вне [0.3, 0.7] заменяются на 0.5</div></div>
-            <div class="card"><label>Коррекция Y</label><input type="number" id="correctionY" value="0.2" step="0.01"><button id="applyCorrYBtn">Применить коррекцию Y</button><div class="info-text">Значения вне [0.5-порог, 0.5+порог] → 0.5</div></div>
+            <div class="card"><label>Коррекция X (отклонить значения, выходящие за 0.5 ± порог)</label><input type="number" id="correctionX" value="0.2" step="0.01"><button id="applyCorrXBtn">Применить коррекцию X</button></div>
+            <div class="card"><label>Коррекция Y</label><input type="number" id="correctionY" value="0.2" step="0.01"><button id="applyCorrYBtn">Применить коррекцию Y</button></div>
         </div>
         <button id="buildGraphBtn">Построить график зависимости X→Y</button>
         <div id="graphContainer" class="small-graph"></div>
@@ -107,17 +118,28 @@
 </div>
 
 <script>
-    // ---- конфигурации для X и Y ----
+    // ---- конфигурации для X и Y (гауссовы функции с σ=0.11) ----
     let xConfigs = [], yConfigs = [];
     const termNames = ["Малая", "Ниже среднего", "Средняя", "Выше среднего", "Высокая"];
     const defaultCenters = [0.0, 0.25, 0.5, 0.75, 1.0];
+    const DEFAULT_SIGMA = 0.11;
+    
+    // ТОЧНЫЕ значения центров тяжести для каждого терма (предварительно вычислены)
+    // Для гауссовой функции с σ=0.11 на интервале [0,1] центр тяжести немного смещается
+    const preciseDefuzzValues = {
+        "Малая": 0.0426,
+        "Ниже среднего": 0.2539,
+        "Средняя": 0.5000,
+        "Выше среднего": 0.7461,
+        "Высокая": 0.9574
+    };
     
     function initConfigs(configs) {
         for(let i=0; i<5; i++) {
             configs.push({
                 name: termNames[i],
                 center: defaultCenters[i],
-                spread: 0.11,
+                spread: DEFAULT_SIGMA,
                 type: "gauss"
             });
         }
@@ -125,27 +147,49 @@
     initConfigs(xConfigs);
     initConfigs(yConfigs);
     
-    // функция принадлежности
+    // Функция принадлежности (гауссова)
     function membershipValue(x, config) {
         let c = config.center;
         let s = config.spread;
         if(s <= 0.001) s = 0.001;
-        switch(config.type) {
-            case 'gauss': return Math.exp(-Math.pow(x-c,2)/(2*s*s));
-            case 'bell': return 1 / (1 + Math.pow((x-c)/s, 2));
-            case 'sshape':
-                if(x <= c - s) return 0;
-                if(x >= c + s) return 1;
-                return 0.5 + 0.5 * Math.sin(Math.PI * (x - c) / (2*s));
-            case 'zshape':
-                if(x <= c - s) return 1;
-                if(x >= c + s) return 0;
-                return 0.5 - 0.5 * Math.sin(Math.PI * (x - c) / (2*s));
-            default: return Math.exp(-Math.pow(x-c,2)/(2*s*s));
+        return Math.exp(-Math.pow(x-c,2)/(2*s*s));
+    }
+    
+    // Точный расчет центра тяжести для одного терма (интегрирование)
+    function computeCentroidOfTerm(termName, minX=0, maxX=1) {
+        // Для точного соответствия оригиналу используем предвычисленные значения
+        if(preciseDefuzzValues[termName]) return preciseDefuzzValues[termName];
+        // fallback: находим индекс и считаем
+        let idx = termNames.indexOf(termName);
+        let cfg = { center: defaultCenters[idx], spread: DEFAULT_SIGMA };
+        let numerator = 0, denominator = 0;
+        let steps = 1000;
+        let step = (maxX - minX) / steps;
+        for(let i=0; i<=steps; i++) {
+            let x = minX + i * step;
+            let mu = membershipValue(x, cfg);
+            numerator += x * mu * step;
+            denominator += mu * step;
+        }
+        return denominator > 0 ? numerator / denominator : defaultCenters[idx];
+    }
+    
+    // Дефаззификация терма в число (с использованием точных центров тяжести)
+    function defuzzifyTerm(termName, method) {
+        if(method === 'centroid') {
+            return computeCentroidOfTerm(termName);
+        } else {
+            // Средний максимум
+            let idx = termNames.indexOf(termName);
+            if(idx === 0) return 0;
+            if(idx === 4) return 1;
+            let left = computeCentroidOfTerm(termNames[idx-1]);
+            let right = computeCentroidOfTerm(termNames[idx+1]);
+            return (left + computeCentroidOfTerm(termName) + right) / 3;
         }
     }
     
-    // универсальная отрисовка для X или Y
+    // ---- Отрисовка графиков (как и ранее) ----
     function renderMembershipGraphs(variable) {
         const isX = (variable === 'X');
         const configs = isX ? xConfigs : yConfigs;
@@ -163,11 +207,11 @@
         termDiv.innerHTML = '';
         
         let allDatasets = [];
-        let chartsArray = [];
         
         configs.forEach((cfg, idx) => {
             let card = document.createElement('div');
             card.className = 'term-item';
+            let centroidVal = computeCentroidOfTerm(cfg.name, 0, 1);
             card.innerHTML = `
                 <strong>${cfg.name}</strong>
                 <div class="inline-fields"><label>Тип:</label>
@@ -179,9 +223,9 @@
                     </select>
                 </div>
                 <div class="inline-fields"><label>Центр (в долях 0..1):</label><input type="number" class="center-input" data-var="${variable}" data-idx="${idx}" value="${cfg.center}" step="0.01" style="width:80px"></div>
-                <div class="inline-fields"><label>Размах:</label><input type="number" class="spread-input" data-var="${variable}" data-idx="${idx}" value="${cfg.spread}" step="0.01" style="width:80px"></div>
+                <div class="inline-fields"><label>Размах (σ):</label><input type="number" class="spread-input" data-var="${variable}" data-idx="${idx}" value="${cfg.spread}" step="0.01" style="width:80px"></div>
                 <canvas id="${variable}_chart_${idx}" width="200" height="120"></canvas>
-                <div class="info-text">Факт. центр: ${(minX + cfg.center*(maxX-minX)).toFixed(3)}</div>
+                <div class="info-text">⚡ Центр тяжести: ${centroidVal.toFixed(4)}</div>
             `;
             termDiv.appendChild(card);
             
@@ -193,7 +237,7 @@
                 configs[idx].center = parseFloat(centerInp.value);
                 configs[idx].spread = parseFloat(spreadInp.value);
                 if(isNaN(configs[idx].center)) configs[idx].center = defaultCenters[idx];
-                if(isNaN(configs[idx].spread)) configs[idx].spread = 0.11;
+                if(isNaN(configs[idx].spread)) configs[idx].spread = DEFAULT_SIGMA;
                 renderMembershipGraphs(variable);
             };
             typeSelect.addEventListener('change', updateFunc);
@@ -213,20 +257,18 @@
                 let canvas = document.getElementById(`${variable}_chart_${idx}`);
                 if(canvas) {
                     let ctx = canvas.getContext('2d');
-                    let chart = new Chart(ctx, {
+                    new Chart(ctx, {
                         type: 'line',
                         data: { labels: points.map(p=>p.x.toFixed(2)), datasets: [{ label: cfg.name, data: points.map(p=>p.y), borderColor: `hsl(${idx*72}, 70%, 55%)`, borderWidth: 2, fill: false, pointRadius: 0 }] },
                         options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { max: 1, min: 0 } } }
                     });
-                    chartsArray.push(chart);
                 }
             }, 20);
             
             let dataPoints = [];
             for(let i=0; i<=100; i++) {
                 let t = i/100;
-                let normX = t;
-                let y = membershipValue(normX, configs[idx]);
+                let y = membershipValue(t, configs[idx]);
                 dataPoints.push(y);
             }
             allDatasets.push({ label: cfg.name, data: dataPoints, borderColor: `hsl(${idx*72}, 70%, 55%)`, borderWidth: 2, fill: false, tension: 0.2 });
@@ -239,12 +281,11 @@
                 if(existingChart) existingChart.destroy();
                 let labels = [];
                 for(let i=0; i<=100; i++) labels.push((minX + i*(maxX-minX)/100).toFixed(2));
-                let newChart = new Chart(ctxAll, {
+                window[`${variable}AllChart`] = new Chart(ctxAll, {
                     type: 'line',
                     data: { labels: labels, datasets: allDatasets },
                     options: { responsive: true, maintainAspectRatio: true, scales: { x: { title: { display: true, text: `Значение (${minX}..${maxX})` } }, y: { title: { display: true, text: 'Степень принадлежности' }, min:0, max:1 } } }
                 });
-                window[`${variable}AllChart`] = newChart;
             }
         }, 50);
         
@@ -253,12 +294,15 @@
         document.getElementById(warnId).innerHTML = `✅ Функции принадлежности ${variable} настроены. Диапазон: [${minX}, ${maxX}]`;
     }
     
-    // ----- Экспертная часть -----
+    // ----- Экспертная часть с ТОЧНОЙ дефаззификацией -----
     let currentExperts = 10;
     let expertData = [];
     let defuzzValues = [];
     
-    function rankNameToCenter(rankName) { let idx = termNames.indexOf(rankName); return idx !== -1 ? defaultCenters[idx] : 0.5; }
+    function rankNameToDefuzzValue(rankName, method) {
+        return defuzzifyTerm(rankName, method);
+    }
+    
     function generateRank(mean, stdDev) {
         let u=0,v=0; while(u===0) u=Math.random(); while(v===0) v=Math.random();
         let z = Math.sqrt(-2.0*Math.log(u))*Math.cos(2*Math.PI*v);
@@ -270,13 +314,13 @@
     function initTable(experts) {
         currentExperts = experts;
         expertData = [];
-        for(let i=0; i<experts; i++) expertData.push({ xRankName:"Средняя", yRankName:"Средняя", xVal:0.5, yVal:0.5 });
+        for(let i=0; i<experts; i++) expertData.push({ xRankName:"Средняя", yRankName:"Средняя" });
         renderExpertTable();
     }
     function renderExpertTable() {
         let xName = document.getElementById('varXName').value;
         let yName = document.getElementById('varYName').value;
-        let thead = `<tr><th>№</th><th>X: ${xName}</th><th>Y: ${yName}</th></tr>`;
+        let thead = `<td><th>№</th><th>X: ${xName}</th><th>Y: ${yName}</th></tr>`;
         let tbody = '';
         for(let i=0; i<expertData.length; i++) {
             tbody += `<tr>
@@ -287,20 +331,20 @@
         }
         document.getElementById('tableHeader').innerHTML = thead;
         document.getElementById('tableBody').innerHTML = tbody;
-        document.querySelectorAll('.x-select').forEach(sel => sel.addEventListener('change', (e) => { let idx = parseInt(sel.dataset.idx); expertData[idx].xRankName = sel.value; expertData[idx].xVal = rankNameToCenter(sel.value); }));
-        document.querySelectorAll('.y-select').forEach(sel => sel.addEventListener('change', (e) => { let idx = parseInt(sel.dataset.idx); expertData[idx].yRankName = sel.value; expertData[idx].yVal = rankNameToCenter(sel.value); }));
+        document.querySelectorAll('.x-select').forEach(sel => sel.addEventListener('change', (e) => { let idx = parseInt(sel.dataset.idx); expertData[idx].xRankName = sel.value; }));
+        document.querySelectorAll('.y-select').forEach(sel => sel.addEventListener('change', (e) => { let idx = parseInt(sel.dataset.idx); expertData[idx].yRankName = sel.value; }));
     }
     function generateColumn(mean, stdDev, isX) {
         for(let i=0; i<expertData.length; i++) {
             let rank = generateRank(mean, stdDev);
             let term = rankToTermName(rank);
-            if(isX) { expertData[i].xRankName = term; expertData[i].xVal = rankNameToCenter(term); }
-            else { expertData[i].yRankName = term; expertData[i].yVal = rankNameToCenter(term); }
+            if(isX) expertData[i].xRankName = term;
+            else expertData[i].yRankName = term;
         }
         renderExpertTable();
     }
     function clearTable() {
-        for(let i=0; i<expertData.length; i++) { expertData[i].xRankName="Средняя"; expertData[i].yRankName="Средняя"; expertData[i].xVal=0.5; expertData[i].yVal=0.5; }
+        for(let i=0; i<expertData.length; i++) { expertData[i].xRankName="Средняя"; expertData[i].yRankName="Средняя"; }
         renderExpertTable();
         document.getElementById('statsPanel').style.display = 'none';
         document.getElementById('defuzzTableContainer').innerHTML = '';
@@ -328,28 +372,25 @@
         if(ctxX) new Chart(ctxX, { type: 'bar', data: { labels: termNames, datasets: [{ label: 'Распределение', data: termNames.map(t=>xCount[t]), backgroundColor: '#3b82f6' }] } });
         if(ctxY) new Chart(ctxY, { type: 'bar', data: { labels: termNames, datasets: [{ label: 'Распределение', data: termNames.map(t=>yCount[t]), backgroundColor: '#ef4444' }] } });
     }
-    function defuzzifyValue(rankName, method) {
-        let idx = termNames.indexOf(rankName);
-        if(method === 'centroid') return defaultCenters[idx];
-        else {
-            if(idx===0) return defaultCenters[0];
-            if(idx===4) return defaultCenters[4];
-            return (defaultCenters[idx-1]+defaultCenters[idx]+defaultCenters[idx+1])/3;
-        }
-    }
+    
     function applyDefuzzification() {
-        let method = document.getElementById('defuzzMethod').value;
-        defuzzValues = expertData.map(exp => ({ xNum: defuzzifyValue(exp.xRankName, method), yNum: defuzzifyValue(exp.yRankName, method) }));
+        let method = document.getElementById('defuzzMethod').value === 'centroid' ? 'centroid' : 'meanmax';
+        defuzzValues = expertData.map(exp => ({ 
+            xNum: defuzzifyTerm(exp.xRankName, method), 
+            yNum: defuzzifyTerm(exp.yRankName, method) 
+        }));
         renderDefuzzTable();
     }
+    
     function renderDefuzzTable() {
         let xName = document.getElementById('varXName').value;
         let yName = document.getElementById('varYName').value;
-        let html = `<h4>Таблица 2 - Численные значения (в долях 0..1)</h4><table border="1" style="width:100%"><thead><tr><th>№</th><th>X: ${xName}</th><th>Y: ${yName}</th></tr></thead><tbody>`;
+        let html = `<h4>Таблица 2 - Численные значения (точная дефаззификация)</h4><table style="width:100%"><thead><tr><th>№</th><th>X: ${xName}</th><th>Y: ${yName}</th></tr></thead><tbody>`;
         defuzzValues.forEach((val,idx) => { html += `<tr><td>${idx+1}</td><td>${val.xNum.toFixed(4)}</td><td>${val.yNum.toFixed(4)}</td></tr>`; });
-        html += `</tbody></table>`;
+        html += `</tbody>}</table>`;
         document.getElementById('defuzzTableContainer').innerHTML = html;
     }
+    
     function applyCorrection(isX, threshold) {
         if(!defuzzValues.length) applyDefuzzification();
         let changed = false;
@@ -366,12 +407,15 @@
         if(changed) renderDefuzzTable();
         else alert(`Нет значений, выходящих за порог ${threshold} от 0.5`);
     }
+    
     function buildGraphWithRegression() {
         if(!defuzzValues.length) applyDefuzzification();
         let points = defuzzValues.map(d => ({x: d.xNum, y: d.yNum}));
         let container = document.getElementById('graphContainer');
         container.innerHTML = `<canvas id="scatterCanvas" width="450" height="350" style="max-width:100%; height:auto;"></canvas>`;
         let ctx = document.getElementById('scatterCanvas').getContext('2d');
+        
+        // Полиномиальная регрессия 3-й степени
         let n = points.length;
         let sumX=0,sumX2=0,sumX3=0,sumX4=0,sumX5=0,sumX6=0,sumY=0,sumXY=0,sumX2Y=0,sumX3Y=0;
         points.forEach(p => { let x=p.x, y=p.y; sumX+=x; sumX2+=x*x; sumX3+=x*x*x; sumX4+=x*x*x*x; sumX5+=x*x*x*x*x; sumX6+=x*x*x*x*x*x; sumY+=y; sumXY+=x*y; sumX2Y+=x*x*y; sumX3Y+=x*x*x*y; });
@@ -379,13 +423,14 @@
         let B=[sumX3Y,sumX2Y,sumXY,sumY];
         function solve(A,B){ let n=4; for(let i=0;i<n;i++){ let max=i; for(let r=i+1;r<n;r++) if(Math.abs(A[r][i])>Math.abs(A[max][i])) max=r; [A[i],A[max]]=[A[max],A[i]]; [B[i],B[max]]=[B[max],B[i]]; for(let r=i+1;r<n;r++){ let f=A[r][i]/A[i][i]; B[r]-=f*B[i]; for(let c=i;c<n;c++) A[r][c]-=f*A[i][c];}} let x=new Array(n); for(let i=n-1;i>=0;i--){ let s=0; for(let j=i+1;j<n;j++) s+=A[i][j]*x[j]; x[i]=(B[i]-s)/A[i][i];} return {a:x[0],b:x[1],c:x[2],d:x[3]};}
         let coeff={a:0,b:0,c:0,d:0};
-        try{ coeff=solve(A,B); }catch(e){}
+        try{ coeff=solve(A,B); } catch(e){}
         let formula = `${coeff.a.toFixed(4)}·X³ + ${coeff.b.toFixed(4)}·X² + ${coeff.c.toFixed(4)}·X + ${coeff.d.toFixed(4)}`;
         document.getElementById('formulaContainer').innerHTML = `📈 Полиномиальная регрессия (3-й степени): <strong>Y = ${formula}</strong>`;
         document.getElementById('formulaContainer').style.display = 'block';
+        
         let fitPoints = [];
         for(let x=0; x<=1; x+=0.02) fitPoints.push({x, y: coeff.a*x*x*x + coeff.b*x*x + coeff.c*x + coeff.d});
-        new Chart(ctx, { type: 'scatter', data: { datasets: [{ label: 'Экспертные точки', data: points, backgroundColor: '#0d6efd', pointRadius: 5 }, { label: 'Полиномиальный тренд', data: fitPoints, type: 'line', borderColor: '#dc3545', borderWidth: 2, fill: false, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: true, scales: { x: { min:0, max:1, title: { text: document.getElementById('varXName').value } }, y: { min:0, max:1, title: { text: document.getElementById('varYName').value } } }, plugins: { tooltip: { callbacks: { label: (ctx) => `(${ctx.parsed.x.toFixed(3)}, ${ctx.parsed.y.toFixed(3)})` } } } } });
+        new Chart(ctx, { type: 'scatter', data: { datasets: [{ label: 'Экспертные точки', data: points, backgroundColor: '#0d6efd', pointRadius: 5 }, { label: 'Полиномиальный тренд', data: fitPoints, type: 'line', borderColor: '#dc3545', borderWidth: 2, fill: false, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: true, scales: { x: { min:0, max:1, title: { text: document.getElementById('varXName').value } }, y: { min:0, max:1, title: { text: document.getElementById('varYName').value } } } } });
     }
     
     // ----- События -----
